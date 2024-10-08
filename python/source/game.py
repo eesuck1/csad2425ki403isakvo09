@@ -1,5 +1,4 @@
 import sys
-import threading
 
 import pygame
 
@@ -8,14 +7,14 @@ pygame.font.init()
 
 from source.communication import Channel
 from source.constants import SCREEN_HEIGHT, SCREEN_WIDTH, CAPTION, FPS, CELLS_NUMBER, DARK_COLOR, LIGHT_COLOR, \
-    FIGURE_COLOR, FIGURE_WIDTH, EMPTY_POSITION, WIN_MASKS, PSOC_ADDRESS, MAN_VS_MAN_PACKET, MAN_VS_AI_PACKET, \
-    AI_VS_AI_PACKET, ACK_PACKET, RESET_PACKET
+    FIGURE_COLOR, FIGURE_WIDTH, EMPTY_POSITION, WIN_MASKS, MAN_VS_MAN_PACKET, MAN_VS_AI_PACKET, \
+    AI_VS_AI_PACKET, ACK_PACKET, RESET_PACKET, PSOC_COM, DUMMY_PACKET
 
 
 class Game:
     def __init__(self) -> None:
         self._bleak_thread_ = None
-        self._channel_ = Channel(PSOC_ADDRESS)
+        self._channel_ = Channel(PSOC_COM)
 
         self._screen_ = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         self._clock_ = pygame.time.Clock()
@@ -39,6 +38,7 @@ class Game:
         self._game_packet_send_ = False
 
         self._click_delay_ = 0
+        self._counter_ = 0
 
         self._game_type_ = 0
         self._winner_ = ""
@@ -114,28 +114,19 @@ class Game:
 
         if self._mvm_rect_.collidepoint(mouse_position):
             self._game_type_ = 1
-            self.send_packet(MAN_VS_MAN_PACKET)
+            self._channel_.send_message(MAN_VS_MAN_PACKET)
         elif self._mva_rect_.collidepoint(mouse_position):
             self._game_type_ = 2
-            self.send_packet(MAN_VS_AI_PACKET)
+            self._channel_.send_message(MAN_VS_AI_PACKET)
         elif self._ava_rect_.collidepoint(mouse_position):
             self._game_type_ = 3
-            self.send_packet(AI_VS_AI_PACKET)
+            self._channel_.send_message(AI_VS_AI_PACKET)
 
-    def place_figure(self, position: tuple[int, int]) -> None:
-        x, y = position
-
-        figure_index_x = x * CELLS_NUMBER // SCREEN_WIDTH
-        figure_index_y = y * CELLS_NUMBER // SCREEN_HEIGHT
-
-        index = figure_index_x * CELLS_NUMBER + figure_index_y
-
-        if self._figures_to_display_[index] == EMPTY_POSITION:
-            self._figures_to_display_[index] = (
-                (figure_index_x, figure_index_y), self._figure_names_[self._current_figure_])
-            self._figures_[index] = self._current_figure_
-
-            self._current_figure_ = not self._current_figure_
+    def place_figure(self, packet: bytes) -> None:
+        self._figures_ = [int(value) for value in packet]
+        self._figures_to_display_ = [((i // CELLS_NUMBER, i % CELLS_NUMBER), self._figure_names_[value])
+                                     if value != 0xFF else EMPTY_POSITION
+                                     for i, value in enumerate(self._figures_)]
 
     def check_win(self) -> None:
         for win_mask in WIN_MASKS:
@@ -151,25 +142,8 @@ class Game:
                 self._game_running_ = False
                 self._winner_ = self._figure_names_[1]
 
-    def send_packet(self, packet: bytes, time_out: int = -1) -> None:
-        counter = 0
-
-        while True:
-            self._channel_.set_buffer(packet, True)
-
-            received = self._channel_.get_buffer()
-
-            if received == ACK_PACKET or counter == time_out:
-                break
-
-            counter += 1
-
     def run(self) -> None:
         self.fill_board()
-
-        self._bleak_thread_ = threading.Thread(target=self._channel_.run)
-        self._bleak_thread_.daemon = True
-        self._bleak_thread_.start()
 
         while self._game_running_:
             for event in pygame.event.get():
@@ -177,6 +151,8 @@ class Game:
                     pygame.quit()
                     sys.exit()
                 if event.type == pygame.MOUSEBUTTONUP and not self._click_delay_:
+                    print("Click")
+
                     if self._game_type_ == 0:
                         self.check_menu()
                     else:
@@ -185,15 +161,14 @@ class Game:
                         figure_index_x = x * CELLS_NUMBER // SCREEN_WIDTH + 1
                         figure_index_y = y * CELLS_NUMBER // SCREEN_HEIGHT + 1
 
-                        self.send_packet(bytes([figure_index_x, figure_index_y]))
-                        # self.place_figure(pygame.mouse.get_pos())
+                        self._channel_.send_message(bytes([figure_index_x, figure_index_y]))
 
                     self._click_delay_ = FPS // 3
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_SPACE:
                         print("Reset Sent")
 
-                        self.send_packet(RESET_PACKET)
+                        self._channel_.send_message(RESET_PACKET)
                         self._game_type_ = 0
 
             match self._game_type_:
@@ -212,13 +187,16 @@ class Game:
                     self.draw_figures()
                     self.check_win()
 
-            packet = self._channel_.get_buffer()
+            packet = self._channel_.receive_message()
+
+            if packet and packet != ACK_PACKET and packet != DUMMY_PACKET:
+                self.place_figure(packet)
+
+            if self._game_type_ != 0:
+                self._channel_.send_message(DUMMY_PACKET)
 
             if self._click_delay_:
                 self._click_delay_ -= 1
-
-            if packet:
-                print(f"[INFO] Received Packet: {packet}")
 
             self._clock_.tick(FPS)
             pygame.display.update()

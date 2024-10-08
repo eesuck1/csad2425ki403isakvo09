@@ -1,53 +1,44 @@
 import asyncio
 
-import bleak
+import serial
 
-from source.constants import PSOC_WRITE_CHARACTERISTIC, PSOC_READ_CHARACTERISTIC
+from source.constants import PSOC_WRITE_CHARACTERISTIC, PSOC_READ_CHARACTERISTIC, PACKET_END_VALUE, PACKET_START_VALUE, \
+    SEND_BUFFER_LENGTH, RECEIVE_BUFFER_LENGTH, ACK_PACKET
 
 
 class Channel:
-    def __init__(self, device_address: str) -> None:
-        self._device_address_ = device_address
+    def __init__(self, com: str) -> None:
+        self._com_ = com
 
-        self._send_buffer_: list[bytes, ...] = []
-        self._receive_buffer_: list[bytes, ...] = []
+        self._port_ = serial.Serial(self._com_, 115200, timeout=0.005)
 
-    def run(self) -> None:
-        asyncio.run(self.run_communication())
+    def __del__(self) -> None:
+        self._port_.close()
 
-    async def run_communication(self) -> None:
-        async with bleak.BleakClient(self._device_address_) as client:
-            print(f"Connected to {self._device_address_}")
+    def send_message(self, buffer: bytes, send_ack: bool = True, info: bool = False) -> None:
+        packet = self.receive_message()
 
-            while True:
-                if len(self._send_buffer_) > 0:
-                    await client.write_gatt_char(PSOC_WRITE_CHARACTERISTIC, self._send_buffer_.pop(0), False)
+        if send_ack:
+            while packet != ACK_PACKET:
+                packet = self.receive_message()
+                send_packet = PACKET_START_VALUE + buffer + PACKET_END_VALUE
 
-                packet = await client.read_gatt_char(PSOC_READ_CHARACTERISTIC)
+                if info:
+                    print(f"[INFO] Sending: {send_packet}")
 
-                if packet:
-                    self._receive_buffer_.append(packet)
-
-                await asyncio.sleep(1e-3)
-
-                self.info()
-
-    def set_buffer(self, buffer: bytes, no_repeat: bool) -> None:
-        if no_repeat and buffer in self._send_buffer_:
-            return
-
-        self._send_buffer_.append(buffer)
-
-    def get_buffer(self) -> bytes:
-        if len(self._receive_buffer_) > 0:
-            return self._receive_buffer_.pop(0)
+                self._port_.write(send_packet)
         else:
-            return b""
+            send_packet = PACKET_START_VALUE + buffer + PACKET_END_VALUE
 
-    def clear(self) -> None:
-        self._send_buffer_.clear()
-        self._receive_buffer_.clear()
+            if info:
+                print(f"[INFO] Sending: {send_packet}")
 
-    def info(self) -> None:
-        print(f"[INFO] Send Buffer: {self._send_buffer_}")
-        print(f"[INFO] Receive Buffer: {self._receive_buffer_}")
+            self._port_.write(send_packet)
+
+    def receive_message(self, decode: bool = False, info: bool = False) -> bytes | str:
+        packet = self._port_.read(RECEIVE_BUFFER_LENGTH)[len(PACKET_START_VALUE):-len(PACKET_END_VALUE)]
+
+        if packet and info:
+            print(f"[INFO] Received: {packet}")
+
+        return packet.decode("windows-1252") if decode else packet
