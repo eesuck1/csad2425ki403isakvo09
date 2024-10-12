@@ -1,0 +1,6 @@
+C:\LPNU\3\CSAD\psoc_project\csad_work\Design01.cydsn\Design01.cyprj|ef930084-ff74-413f-9a21-bdac5f140e82
+C:\Cypress\PSoC Creator\4.4\PSoC Creator\psoc\content\default\CyAnnotationLibrary\CyAnnotationLibrary.cylib\CyAnnotationLibrary.cyprj|4ef770d8-25b8-4d0d-8807-224555366095
+C:\Users\IsakVolodymy\Documents\PSoC Creator\4.4\Downloads ( 4.4).cylib\Downloads ( 4.4).cyprj|5381da7d-4055-4650-a510-a3faf125cbfd
+C:\Cypress\PSoC Creator\4.4\PSoC Creator\psoc\content\cycomponentlibraryupdates\CyComponentLibraryUpdates.cylib\CyComponentLibraryUpdates.cyprj|a5948a36-7c4d-4420-a945-8c2d179432e9
+C:\Cypress\PSoC Creator\4.4\PSoC Creator\psoc\content\cycomponentlibrary\CyComponentLibrary.cylib\CyComponentLibrary.cyprj|f55a6837-07c7-4f1b-b2e8-987dbd3ecab2
+C:\Cypress\PSoC Creator\4.4\PSoC Creator\psoc\content\cyprimitives\CyPrimitives.cylib\CyPrimitives.cyprj|55b4cba9-cc6f-4d42-b186-8b37c2c2283b

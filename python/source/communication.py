@@ -15,8 +15,10 @@ class Channel:
     def __del__(self) -> None:
         self._port_.close()
 
-    def send_message(self, buffer: bytes, send_ack: bool = True, info: bool = False) -> None:
+    def send_message(self, buffer: bytes, send_ack: bool = False, info: bool = False) -> None:
         packet = self.receive_message()
+        send_packet = PACKET_START_VALUE + buffer + PACKET_END_VALUE
+        self._port_.write(send_packet)
 
         if send_ack:
             while packet != ACK_PACKET:
@@ -28,8 +30,6 @@ class Channel:
 
                 self._port_.write(send_packet)
         else:
-            send_packet = PACKET_START_VALUE + buffer + PACKET_END_VALUE
-
             if info:
                 print(f"[INFO] Sending: {send_packet}")
 

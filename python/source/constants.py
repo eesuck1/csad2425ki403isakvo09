@@ -32,7 +32,10 @@ MAN_VS_MAN_PACKET = bytes([0xBB for _ in range(SEND_BUFFER_LENGTH)])
 MAN_VS_AI_PACKET = bytes([0xCC for _ in range(SEND_BUFFER_LENGTH)])
 AI_VS_AI_PACKET = bytes([0xDD for _ in range(SEND_BUFFER_LENGTH)])
 RESET_PACKET = bytes([0x99 for _ in range(SEND_BUFFER_LENGTH)])
-DUMMY_PACKET = bytes([0x00 for _ in range(SEND_BUFFER_LENGTH)])
+DUMMY_PACKET = bytes([0x33 for _ in range(SEND_BUFFER_LENGTH)])
+WIN_NOD_PACKET = bytes([0x77 for _ in range(SEND_BUFFER_LENGTH)])
+WIN_CROSS_PACKET = bytes([0x88 for _ in range(SEND_BUFFER_LENGTH)])
+NO_WINNER_PACKET = bytes([0x22 for _ in range(SEND_BUFFER_LENGTH)])
 
 ACK_PACKET = bytes([0xEE for _ in range(CELLS_NUMBER ** 2)])
 

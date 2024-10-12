@@ -7,14 +7,14 @@ pygame.font.init()
 
 from source.communication import Channel
 from source.constants import SCREEN_HEIGHT, SCREEN_WIDTH, CAPTION, FPS, CELLS_NUMBER, DARK_COLOR, LIGHT_COLOR, \
-    FIGURE_COLOR, FIGURE_WIDTH, EMPTY_POSITION, WIN_MASKS, MAN_VS_MAN_PACKET, MAN_VS_AI_PACKET, \
-    AI_VS_AI_PACKET, ACK_PACKET, RESET_PACKET, PSOC_COM, DUMMY_PACKET
+    FIGURE_COLOR, FIGURE_WIDTH, EMPTY_POSITION, MAN_VS_MAN_PACKET, MAN_VS_AI_PACKET, \
+    AI_VS_AI_PACKET, ACK_PACKET, RESET_PACKET, DUMMY_PACKET
 
 
 class Game:
-    def __init__(self) -> None:
+    def __init__(self, com_port: str) -> None:
         self._bleak_thread_ = None
-        self._channel_ = Channel(PSOC_COM)
+        self._channel_ = Channel(com_port)
 
         self._screen_ = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         self._clock_ = pygame.time.Clock()
@@ -30,9 +30,12 @@ class Game:
 
         self._font_ = pygame.font.SysFont("Arial", 24)
 
-        self._mvm_rect_ = pygame.FRect((SCREEN_WIDTH // 10, SCREEN_HEIGHT // 1.25), (SCREEN_WIDTH // 1.25, SCREEN_HEIGHT // 8))
-        self._mva_rect_ = pygame.FRect((SCREEN_WIDTH // 10, SCREEN_HEIGHT // 2.25), (SCREEN_WIDTH // 1.25, SCREEN_HEIGHT // 8))
-        self._ava_rect_ = pygame.FRect((SCREEN_WIDTH // 10, SCREEN_HEIGHT // 8), (SCREEN_WIDTH // 1.25, SCREEN_HEIGHT // 8))
+        self._mvm_rect_ = pygame.FRect((SCREEN_WIDTH // 10, SCREEN_HEIGHT // 1.25),
+                                       (SCREEN_WIDTH // 1.25, SCREEN_HEIGHT // 8))
+        self._mva_rect_ = pygame.FRect((SCREEN_WIDTH // 10, SCREEN_HEIGHT // 2.25),
+                                       (SCREEN_WIDTH // 1.25, SCREEN_HEIGHT // 8))
+        self._ava_rect_ = pygame.FRect((SCREEN_WIDTH // 10, SCREEN_HEIGHT // 8),
+                                       (SCREEN_WIDTH // 1.25, SCREEN_HEIGHT // 8))
 
         self._game_running_ = True
         self._game_packet_send_ = False
@@ -123,29 +126,35 @@ class Game:
             self._channel_.send_message(AI_VS_AI_PACKET)
 
     def place_figure(self, packet: bytes) -> None:
-        self._figures_ = [int(value) for value in packet]
-        self._figures_to_display_ = [((i // CELLS_NUMBER, i % CELLS_NUMBER), self._figure_names_[value])
-                                     if value != 0xFF else EMPTY_POSITION
-                                     for i, value in enumerate(self._figures_)]
+        figures = [int(value) for value in packet]
 
-    def check_win(self) -> None:
-        for win_mask in WIN_MASKS:
-            accumulator = 0
+        if self._figures_ == figures:
+            return
 
-            for figure, mask in zip(self._figures_, win_mask):
-                accumulator += figure & mask
+        self._figures_ = figures
 
-            if accumulator == 0:
-                self._game_running_ = False
-                self._winner_ = self._figure_names_[0]
-            elif accumulator == 3:
-                self._game_running_ = False
-                self._winner_ = self._figure_names_[1]
+        try:
+            self._figures_to_display_ = [((i // CELLS_NUMBER, i % CELLS_NUMBER), self._figure_names_[value])
+                                         if value != 0xFF else EMPTY_POSITION
+                                         for i, value in enumerate(self._figures_)]
+        except Exception as error:  # noqa
+            ...
+
+    def check_win(self, packet: bytes) -> None:
+        if b"\x88" in packet:
+            self._game_running_ = False
+            self._winner_ = "cross"
+        elif b"\x77" in packet:
+            self._game_running_ = False
+            self._winner_ = "nod"
+        elif b"\x22" in packet:
+            self._game_running_ = False
+            self._winner_ = "tie"
 
     def run(self) -> None:
         self.fill_board()
 
-        while self._game_running_:
+        while True:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
@@ -171,29 +180,36 @@ class Game:
                         self._channel_.send_message(RESET_PACKET)
                         self._game_type_ = 0
 
+            packet = self._channel_.receive_message()
+
             match self._game_type_:
                 case 0:
                     self.draw_menu()
                 case 1:
                     self.draw_board()
                     self.draw_figures()
-                    self.check_win()
+                    self.check_win(packet)
                 case 2:
                     self.draw_board()
                     self.draw_figures()
-                    self.check_win()
+                    self.check_win(packet)
                 case 3:
                     self.draw_board()
                     self.draw_figures()
-                    self.check_win()
+                    self.check_win(packet)
 
-            packet = self._channel_.receive_message()
+            if not self._game_running_:
+                break
 
-            if packet and packet != ACK_PACKET and packet != DUMMY_PACKET:
+            if (packet and packet != ACK_PACKET
+                    and packet != DUMMY_PACKET
+                    and len(packet) == CELLS_NUMBER ** 2):
                 self.place_figure(packet)
 
             if self._game_type_ != 0:
                 self._channel_.send_message(DUMMY_PACKET)
+
+                self._counter_ = 0
 
             if self._click_delay_:
                 self._click_delay_ -= 1
