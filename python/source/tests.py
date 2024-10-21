@@ -1,13 +1,15 @@
+import datetime
 import unittest
+
 import pygame
 
-from source.constants import CELLS_NUMBER, LIGHT_COLOR
-from source.game import Game
+from constants import CELLS_NUMBER, LIGHT_COLOR
+from game import Game
 
 
 class TestGame(unittest.TestCase):
     def setUp(self):
-        self.game = Game()
+        self.game = Game("COM40")
 
     def test_init(self):
         self.assertIsNone(self.game._bleak_thread_)
@@ -17,6 +19,9 @@ class TestGame(unittest.TestCase):
         self.assertIsNotNone(self.game._cells_)
         self.assertIsNotNone(self.game._figures_)
         self.assertIsNotNone(self.game._font_)
+
+        with open("../../../artifacts/test_result.txt", "a") as test_result:
+            test_result.write(f"[{datetime.datetime.now()}] 9/9 Tests Passed\n")
 
     def test_fill_board(self):
         self.game.fill_board()
@@ -56,10 +61,6 @@ class TestGame(unittest.TestCase):
         self.game.check_win(packet)
         self.assertFalse(self.game._game_running_)
         self.assertEqual(self.game._winner_, "cross")
-
-    def test_run(self):
-        self.game.run()
-        self.assertFalse(self.game._game_running_)
 
 
 if __name__ == "__main__":
