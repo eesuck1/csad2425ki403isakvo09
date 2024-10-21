@@ -5,8 +5,8 @@ import pygame
 pygame.init()
 pygame.font.init()
 
-from source.communication import Channel
-from source.constants import SCREEN_HEIGHT, SCREEN_WIDTH, CAPTION, FPS, CELLS_NUMBER, DARK_COLOR, LIGHT_COLOR, \
+from communication import Channel
+from constants import SCREEN_HEIGHT, SCREEN_WIDTH, CAPTION, FPS, CELLS_NUMBER, DARK_COLOR, LIGHT_COLOR, \
     FIGURE_COLOR, FIGURE_WIDTH, EMPTY_POSITION, MAN_VS_MAN_PACKET, MAN_VS_AI_PACKET, \
     AI_VS_AI_PACKET, ACK_PACKET, RESET_PACKET, DUMMY_PACKET
 

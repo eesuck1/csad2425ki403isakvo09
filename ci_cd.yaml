@@ -1,0 +1,16 @@
+# Filename: ci-cd.yaml
+
+stages:
+  - build
+  - test
+
+build:
+  stage: build
+  script:
+    - cd ci/
+    - ./setup_python.bat
+
+test:
+  stage: test
+  script:
+    - ./run_tests.bat
