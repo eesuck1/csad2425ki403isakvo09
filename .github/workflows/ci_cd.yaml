@@ -23,18 +23,9 @@ jobs:
 
     - name: Install dependencies
       run: |
-<<<<<<< HEAD
         cd ci
         .\setup_python.bat
 
     - name: Run tests
       run: |
         .\run_tests.bat
-=======
-        cd ci/
-        setup_python.bat
-
-    - name: Run tests
-      run: |
-        run_tests.bat
->>>>>>> 32c851c28f9ca9c25f3a47d73132f10fce7bd59f
