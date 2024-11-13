@@ -16,3 +16,9 @@
 
 - python 3.11
 - PSoC Programmer
+
+Використання:
+
+1. Запустити скрипт ci/setup_python.bat
+2. Прошити (CYBLE-416045-02) файлом hex/csad.hex
+3. Запустити python main.py COM<номер комунікаційного порта>
