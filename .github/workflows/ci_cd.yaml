@@ -29,4 +29,4 @@ jobs:
     - name: Run tests
       run: |
         cd ci
-        .\run_tests.bat
+        .\run_tests_mock.bat
